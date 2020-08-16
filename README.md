@@ -1,6 +1,6 @@
 # BuyBulkyBook
 
-This project is created for learning purpose of ASP.NET CORE. 
+This project is created for learning purpose of ASP.NET CORE 3.1
 With the use of repository pattern with dependency injection allows us to decouple the Application Db context and model class. 
 Learnings are included
  - Get Familar with ASP.NET CORE archtecture.
