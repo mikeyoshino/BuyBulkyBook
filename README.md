@@ -11,7 +11,7 @@ Learnings are included
 Freature
 - Content Management Function.
 - Add Books with it cover and Category and Cover Type.
-- User Management Function
+- User Management Function.
 - Lock and Unlock user function.
 - Custom Email sender with SendGrid.
 - Shopping Cart function with cookies session.
