@@ -19,8 +19,13 @@ namespace BuyBulkyBook.Models
 
         public string PostCode { get; set; }
 
+        [ForeignKey("CompanyId")]
+        public Company Company { get; set; }
+        public int? CompanyId { get; set; }
 
         [NotMapped]
         public string Role { get; set; }
+
+
     }
 }

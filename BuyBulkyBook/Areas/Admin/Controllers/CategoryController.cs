@@ -5,6 +5,8 @@ using System.Threading.Tasks;
 using BuyBulkyBook.DataAccess.Data;
 using BuyBulkyBook.DataAccess.Repository.IRepository;
 using BuyBulkyBook.Models;
+using BuyBulkyBook.Utility;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
@@ -12,6 +14,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Internal;
 namespace BulkyBook.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
     public class CategoryController : Controller
     {
 

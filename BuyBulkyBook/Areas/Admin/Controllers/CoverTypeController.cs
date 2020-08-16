@@ -7,10 +7,12 @@ using BuyBulkyBook.Models;
 using Microsoft.AspNetCore.Mvc;
 using BuyBulkyBook.Utility;
 using Dapper;
+using Microsoft.AspNetCore.Authorization;
 
 namespace BulkyBook.Areas.Admin.Controllers
 {
     [Area("Admin")]
+    [Authorize(Roles = SD.Role_Admin + "," + SD.Role_Employee)]
     public class CoverTypeController : Controller
     {
 
