@@ -21,10 +21,10 @@ namespace BuyBulkyBook.Utility
             return Execute(emailOptions.SendGridKey, subject, htmlMessage, email);
         }
 
-        private static Task Execute(string sendgridKey, string subject, string message, string email)
+        private Task Execute(string sendgridKey, string subject, string message, string email)
         {
             var client = new SendGridClient(sendgridKey);
-            var from = new EmailAddress("admin@buybulkybook.com", "BuyBulkyBook");
+            var from = new EmailAddress("admin@bulky.com", "Buy BulkyBook");
             var to = new EmailAddress(email, "End User");
             //var plainTextContent = "and easy to do anywhere, even with C#";
             //var htmlContent = "<strong>and easy to do anywhere, even with C#</strong>";

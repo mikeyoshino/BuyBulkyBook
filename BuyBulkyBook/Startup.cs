@@ -16,6 +16,7 @@ using BuyBulkyBook.DataAccess.Repository;
 using BuyBulkyBook.DataAccess.Repository.IRepository;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using BuyBulkyBook.Utility;
+using Stripe;
 
 namespace BuyBulkyBook
 {
@@ -40,7 +41,7 @@ namespace BuyBulkyBook
 
             //Try to match what ever in EmailOptions class in appsetting. it will automatically poppulate property vaule if fields are matched.
             services.Configure<EmailOptions>(Configuration);
-
+            services.Configure<StripeSetting>(Configuration.GetSection("Stripe"));
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddControllersWithViews().AddRazorRuntimeCompilation();
@@ -77,6 +78,7 @@ namespace BuyBulkyBook
             app.UseStaticFiles();
 
             app.UseRouting();
+            StripeConfiguration.ApiKey = Configuration.GetSection("Stripe")["SecretKey"];
             app.UseSession();
 
             app.UseAuthentication();

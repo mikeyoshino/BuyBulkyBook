@@ -116,17 +116,17 @@ namespace BuyBulkyBook.Areas.Identity.Pages.Account
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
             if (ModelState.IsValid)
             {
-                var user = new ApplicationUser { 
-
-                    UserName = Input.Email, 
-                    Email = Input.Email ,
+                var user = new ApplicationUser
+                {
+                    UserName = Input.Email,
+                    Email = Input.Email,
                     CompanyId = Input.CompanyId,
                     StreetAddress = Input.StreetAddress,
-                    State = Input.State,
                     City = Input.City,
+                    State = Input.State,
                     PostCode = Input.PostCode,
-                    PhoneNumber = Input.PhoneNumber,
                     Name = Input.Name,
+                    PhoneNumber = Input.PhoneNumber,
                     Role = Input.Role
                 };
                 var result = await _userManager.CreateAsync(user, Input.Password);
@@ -134,8 +134,7 @@ namespace BuyBulkyBook.Areas.Identity.Pages.Account
                 {
                     _logger.LogInformation("User created a new account with password.");
 
-                    //check if roles are exist if not push new ones to db.
-                    if(!await _roleManager.RoleExistsAsync(SD.Role_Admin))
+                    if (!await _roleManager.RoleExistsAsync(SD.Role_Admin))
                     {
                         await _roleManager.CreateAsync(new IdentityRole(SD.Role_Admin));
                     }
@@ -143,29 +142,25 @@ namespace BuyBulkyBook.Areas.Identity.Pages.Account
                     {
                         await _roleManager.CreateAsync(new IdentityRole(SD.Role_Employee));
                     }
-                    if (!await _roleManager.RoleExistsAsync(SD.Role_User_Indi))
-                    {
-                        await _roleManager.CreateAsync(new IdentityRole(SD.Role_User_Indi));
-                    }
                     if (!await _roleManager.RoleExistsAsync(SD.Role_User_Comp))
                     {
                         await _roleManager.CreateAsync(new IdentityRole(SD.Role_User_Comp));
                     }
+                    if (!await _roleManager.RoleExistsAsync(SD.Role_User_Indi))
+                    {
+                        await _roleManager.CreateAsync(new IdentityRole(SD.Role_User_Indi));
+                    }
 
-                    //if user role is empty we assume that it is individual company.
                     if (user.Role == null)
                     {
                         await _userManager.AddToRoleAsync(user, SD.Role_User_Indi);
                     }
                     else
                     {
-                        //check if company role is select a registation with company role.
-                        if(user.CompanyId > 0)
+                        if (user.CompanyId > 0)
                         {
                             await _userManager.AddToRoleAsync(user, SD.Role_User_Comp);
                         }
-
-                        //will be one of role that admin want to assign.
                         await _userManager.AddToRoleAsync(user, user.Role);
                     }
 
@@ -174,7 +169,7 @@ namespace BuyBulkyBook.Areas.Identity.Pages.Account
                     var callbackUrl = Url.Page(
                         "/Account/ConfirmEmail",
                         pageHandler: null,
-                        values: new { area = "Identity", userId = user.Id, code = code, returnUrl = returnUrl },
+                        values: new { area = "Identity", userId = user.Id, code = code },
                         protocol: Request.Scheme);
 
                     await _emailSender.SendEmailAsync(Input.Email, "Confirm your email",
@@ -182,19 +177,19 @@ namespace BuyBulkyBook.Areas.Identity.Pages.Account
 
                     if (_userManager.Options.SignIn.RequireConfirmedAccount)
                     {
-                        return RedirectToPage("RegisterConfirmation", new { email = Input.Email, returnUrl = returnUrl });
+                        return RedirectToPage("RegisterConfirmation", new { email = Input.Email });
                     }
                     else
                     {
-                        if(user.Role == null)
+                        if (user.Role == null)
                         {
-                        await _signInManager.SignInAsync(user, isPersistent: false);
-                        return LocalRedirect(returnUrl);
+                            await _signInManager.SignInAsync(user, isPersistent: false);
+                            return LocalRedirect(returnUrl);
                         }
                         else
                         {
-                            //admin is registering new user
-                            return RedirectToAction("Index", "User", new {Area = "Admin" });
+                            //admin is registering a new user
+                            return RedirectToAction("Index", "User", new { Area = "Admin" });
                         }
                     }
                 }
@@ -203,9 +198,23 @@ namespace BuyBulkyBook.Areas.Identity.Pages.Account
                     ModelState.AddModelError(string.Empty, error.Description);
                 }
             }
+            Input = new InputModel()
+            {
+                CompanyList = _unitOfWork.Company.GetAll().Select(i => new SelectListItem
+                {
+                    Text = i.Name,
+                    Value = i.Id.ToString()
+                }),
+                RoleList = _roleManager.Roles.Where(u => u.Name != SD.Role_User_Indi).Select(x => x.Name).Select(i => new SelectListItem
+                {
+                    Text = i,
+                    Value = i
+                })
+            };
 
             // If we got this far, something failed, redisplay form
             return Page();
-        }
+        
+    }
     }
 }
