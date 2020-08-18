@@ -14,13 +14,10 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.CodeAnalysis.Options;
 using Stripe;
 
 namespace BuyBulkyBook.Areas.Customer.Controllers
 {
-
-
     [Area("Customer")]
     public class CartController : Controller
     {
@@ -28,6 +25,7 @@ namespace BuyBulkyBook.Areas.Customer.Controllers
         private readonly IEmailSender _emailSender;
         private readonly UserManager<IdentityUser> _userManager;
 
+        [BindProperty]
         public ShoppingCartVM ShoppingCartVM { get; set; }
 
         public CartController(IUnitOfWork unitOfWork, IEmailSender emailSender, UserManager<IdentityUser> userManager)
@@ -39,58 +37,46 @@ namespace BuyBulkyBook.Areas.Customer.Controllers
 
         public IActionResult Index()
         {
-            //use to find user Id
             var claimsIdentity = (ClaimsIdentity)User.Identity;
-            var claims = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
+            var claim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
 
-            //Retreive shopping cart from database.
             ShoppingCartVM = new ShoppingCartVM()
             {
-                OrderHeader = new OrderHeader(),
-                ListCart = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == claims.Value, includeProperties: "Product")
+                OrderHeader = new Models.OrderHeader(),
+                ListCart = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == claim.Value, includeProperties: "Product")
             };
-
-            //Get applicartion user with Company
             ShoppingCartVM.OrderHeader.OrderTotal = 0;
-            ShoppingCartVM.OrderHeader.ApplicationUser = _unitOfWork.ApplicationUser.GetFirstOrDefault(
-                u => u.Id == claims.Value, includeProperties: "Company");
+            ShoppingCartVM.OrderHeader.ApplicationUser = _unitOfWork.ApplicationUser
+                                                        .GetFirstOrDefault(u => u.Id == claim.Value,
+                                                        includeProperties: "Company");
 
-
-            //Iterating through all of the item to calculate the OrderTotal.
             foreach (var list in ShoppingCartVM.ListCart)
             {
-                //Calculate price based on count. if count is increased more than 50 and 100 price changed.
                 list.Price = SD.GetPriceBasedOnQuantity(list.Count, list.Product.Price,
-                    list.Product.Price50, list.Product.Price100);
-
-                //Get order total.
+                                                    list.Product.Price50, list.Product.Price100);
                 ShoppingCartVM.OrderHeader.OrderTotal += (list.Price * list.Count);
-
-                //Convert description to raw html then check if char is more than 100 if yes cut it and add ... behind.
                 list.Product.Description = SD.ConvertToRawHtml(list.Product.Description);
                 if (list.Product.Description.Length > 100)
                 {
-                    list.Product.Description = list.Product.Description.Substring(0, 99) + "..";
-
+                    list.Product.Description = list.Product.Description.Substring(0, 99) + "...";
                 }
             }
 
 
-
             return View(ShoppingCartVM);
         }
+
         [HttpPost]
         [ActionName("Index")]
         public async Task<IActionResult> IndexPOST()
         {
-            //use to find user Id
             var claimsIdentity = (ClaimsIdentity)User.Identity;
-            var claims = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
-            var user = _unitOfWork.ApplicationUser.GetFirstOrDefault(u => u.Id == claims.Value);
+            var claim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
+            var user = _unitOfWork.ApplicationUser.GetFirstOrDefault(u => u.Id == claim.Value);
 
             if (user == null)
             {
-                ModelState.AddModelError(string.Empty, "Verification Email is empty!");
+                ModelState.AddModelError(string.Empty, "Verification email is empty!");
             }
 
             var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
@@ -103,29 +89,32 @@ namespace BuyBulkyBook.Areas.Customer.Controllers
 
             await _emailSender.SendEmailAsync(user.Email, "Confirm your email",
                 $"Please confirm your account by <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicking here</a>.");
-            ModelState.AddModelError(string.Empty, "Verification Email is sent please check your email!");
 
+            ModelState.AddModelError(string.Empty, "Verification email sent. Please check your email.");
             return RedirectToAction("Index");
 
         }
+
+
         public IActionResult Plus(int cartId)
         {
             var cart = _unitOfWork.ShoppingCart.GetFirstOrDefault
-                       (c => c.Id == cartId, includeProperties:"Product");
+                            (c => c.Id == cartId, includeProperties: "Product");
             cart.Count += 1;
-            cart.Price = SD.GetPriceBasedOnQuantity(cart.Count, cart.Product.Price, cart.Product.Price50, cart.Product.Price100);
+            cart.Price = SD.GetPriceBasedOnQuantity(cart.Count, cart.Product.Price,
+                                    cart.Product.Price50, cart.Product.Price100);
             _unitOfWork.Save();
-
             return RedirectToAction(nameof(Index));
-
         }
+
         public IActionResult Minus(int cartId)
         {
             var cart = _unitOfWork.ShoppingCart.GetFirstOrDefault
-                       (c => c.Id == cartId, includeProperties: "Product");
-            if(cart.Count == 1)
+                            (c => c.Id == cartId, includeProperties: "Product");
+
+            if (cart.Count == 1)
             {
-                var cnt = _unitOfWork.ShoppingCart.GetAll(c => c.ApplicationUserId == cart.ApplicationUserId).ToList().Count();
+                var cnt = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == cart.ApplicationUserId).ToList().Count;
                 _unitOfWork.ShoppingCart.Remove(cart);
                 _unitOfWork.Save();
                 HttpContext.Session.SetInt32(SD.ssShoppingCart, cnt - 1);
@@ -133,51 +122,48 @@ namespace BuyBulkyBook.Areas.Customer.Controllers
             else
             {
                 cart.Count -= 1;
-                cart.Price = SD.GetPriceBasedOnQuantity(cart.Count, cart.Product.Price, cart.Product.Price50, cart.Product.Price100);
+                cart.Price = SD.GetPriceBasedOnQuantity(cart.Count, cart.Product.Price,
+                                    cart.Product.Price50, cart.Product.Price100);
                 _unitOfWork.Save();
             }
 
             return RedirectToAction(nameof(Index));
-
         }
+
         public IActionResult Remove(int cartId)
         {
             var cart = _unitOfWork.ShoppingCart.GetFirstOrDefault
-                       (c => c.Id == cartId, includeProperties: "Product");
+                            (c => c.Id == cartId, includeProperties: "Product");
 
-                var cnt = _unitOfWork.ShoppingCart.GetAll(c => c.ApplicationUserId == cart.ApplicationUserId).ToList().Count();
-                _unitOfWork.ShoppingCart.Remove(cart);
-                _unitOfWork.Save();
-                HttpContext.Session.SetInt32(SD.ssShoppingCart, cnt - 1);
+            var cnt = _unitOfWork.ShoppingCart.GetAll(u => u.ApplicationUserId == cart.ApplicationUserId).ToList().Count;
+            _unitOfWork.ShoppingCart.Remove(cart);
+            _unitOfWork.Save();
+            HttpContext.Session.SetInt32(SD.ssShoppingCart, cnt - 1);
+
 
             return RedirectToAction(nameof(Index));
-
         }
 
         public IActionResult Summary()
         {
             var claimsIdentity = (ClaimsIdentity)User.Identity;
-            var claims = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
+            var claim = claimsIdentity.FindFirst(ClaimTypes.NameIdentifier);
 
-            ShoppingCartVM = new ShoppingCartVM
+            ShoppingCartVM = new ShoppingCartVM()
             {
-                OrderHeader = new OrderHeader(),
-                ListCart = _unitOfWork.ShoppingCart.GetAll(c => c.ApplicationUserId == claims.Value, 
-                                                                                        includeProperties:"Product")
+                OrderHeader = new Models.OrderHeader(),
+                ListCart = _unitOfWork.ShoppingCart.GetAll(c => c.ApplicationUserId == claim.Value,
+                                                            includeProperties: "Product")
             };
-            
 
             ShoppingCartVM.OrderHeader.ApplicationUser = _unitOfWork.ApplicationUser
-                                                        .GetFirstOrDefault(u => u.Id == claims.Value, includeProperties: "Company");
+                                                            .GetFirstOrDefault(c => c.Id == claim.Value,
+                                                                includeProperties: "Company");
 
-            //Iterating through all of the item to calculate the OrderTotal.
             foreach (var list in ShoppingCartVM.ListCart)
             {
-                //Calculate price based on count. if count is increased more than 50 and 100 price changed.
                 list.Price = SD.GetPriceBasedOnQuantity(list.Count, list.Product.Price,
-                    list.Product.Price50, list.Product.Price100);
-
-                //Get order total.
+                                                    list.Product.Price50, list.Product.Price100);
                 ShoppingCartVM.OrderHeader.OrderTotal += (list.Price * list.Count);
             }
             ShoppingCartVM.OrderHeader.Name = ShoppingCartVM.OrderHeader.ApplicationUser.Name;
@@ -187,11 +173,9 @@ namespace BuyBulkyBook.Areas.Customer.Controllers
             ShoppingCartVM.OrderHeader.State = ShoppingCartVM.OrderHeader.ApplicationUser.State;
             ShoppingCartVM.OrderHeader.PostalCode = ShoppingCartVM.OrderHeader.ApplicationUser.PostCode;
 
-            HttpContext.Session.GetInt32(SD.ssShoppingCart);
-
             return View(ShoppingCartVM);
-
         }
+
         [HttpPost]
         [ActionName("Summary")]
         [ValidateAntiForgeryToken]
@@ -278,6 +262,7 @@ namespace BuyBulkyBook.Areas.Customer.Controllers
             return RedirectToAction("OrderConfirmation", "Cart", new { id = ShoppingCartVM.OrderHeader.Id });
 
         }
+
         public IActionResult OrderConfirmation(int id)
         {
             return View(id);
