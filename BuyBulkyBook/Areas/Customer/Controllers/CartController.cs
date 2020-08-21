@@ -199,7 +199,6 @@ namespace BuyBulkyBook.Areas.Customer.Controllers
             _unitOfWork.OrderHeader.Add(ShoppingCartVM.OrderHeader);
             _unitOfWork.Save();
 
-            List<OrderDetails> orderDetailsList = new List<OrderDetails>();
             foreach (var item in ShoppingCartVM.ListCart)
             {
                 item.Price = SD.GetPriceBasedOnQuantity(item.Count, item.Product.Price,
@@ -220,6 +219,8 @@ namespace BuyBulkyBook.Areas.Customer.Controllers
             _unitOfWork.Save();
             HttpContext.Session.SetInt32(SD.ssShoppingCart, 0);
 
+
+            //for authorized user.
             if (stripeToken == null)
             {
                 //order will be created for delayed payment for authroized company
